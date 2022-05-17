@@ -1,0 +1,9 @@
+SLiM
+from_remote
+figures
+tmp
+output
+sync
+__pycache__
+.venv
+venv

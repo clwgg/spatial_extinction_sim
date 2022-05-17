@@ -1,0 +1,289 @@
+/* NOTE:
+ Throughout, I will be using /**/-style comments for
+ annotations, and //-style comments for commented code
+*/
+
+
+function (float) getSpatialK(void) {
+	/* This function is where extinction happens! `getSpatialK()` returns a vector
+	of per-individual `K` (i.e. the carrying capacity), which allows us to
+	modulate how much of the total carrying capacity `maxK` is felt by each
+	individual in the population.
+
+	At 'steady state', i.e. without extinction dynamics, the function will just
+	return a vector of length(inds), where each value is equal to maxK. This
+	means that each individual in the simulation 'feels' the same, maximum
+	carrying capacity.
+
+	Under extinction dynamics the function allows to modulate `K` of each
+	individual, for example as a function of their positions in continuous
+	space. Currently implemented as `ExtinctionMode == "step"`, for example, we
+	can set the per-individual `K` to zero as a function of an individuals
+	latitude, leading to a step-function extinction progressing from south to
+	north. */
+	inds = sim.subpopulations.individuals;
+
+	if (sim.generation < GenSwitchK) {
+		return rep(asFloat(maxK), length(inds)); /* all individuals "feel" maxK */
+	}
+
+	lats = inds.spatialPosition[seq(1, length(inds)*2-1, 2)]; /* every 2nd coord is a latitude! */
+	assert(length(inds) == length(lats));
+
+	shrink_gen = sim.generation - GenSwitchK;
+	shrink = shrink_gen * ReduceStepK; /* this assumes maximum latitute == 1.0 */
+
+	if (ExtinctMode == "step")
+	{ /* K=maxK for individuals at latitudes > shrink, K=0.0 otherwise */
+		return ifelse(lats > shrink, asFloat(maxK), 0.0);
+	}
+	if (ExtinctMode == "slope")
+	{
+		if (shrink <= 1.0) {
+			/* this will be true for the first 1/ReduceStepK generations of extinction */
+			scaleK = asFloat(maxK);
+		} else {
+			/* This block governs what happens after the first 1/ReduceStepK
+			generations. This is pretty experimental and up for evaluation (see
+			commented-out code). The current default (non-commented) is to let
+			`shrink` increase further, which is akin to moving the extinction slope
+			forward further until a theoretical maximum of 2*1/ReduceStepK at which
+			the carrying capacity is 0.0 at a latitude of 1.0 (i.e. the maximum).
+			Other options are to stop the extinction front, and either let a refugium
+			population establish until the end of the simulation, or drive it to
+			extinction by reducing its maximum carrying capacity over time (`scaleK`)
+			at a user-defined speed (`K_reduce_factor`). */
+			// max_reduce = shrink - 1.0;
+			// K_reduce_factor = 1.0;
+			// scaleK = maxK - (maxK * max_reduce * K_reduce_factor);
+			// sim.setValue("scaleK", scaleK);
+			// shrink = 1.0;
+			scaleK = asFloat(maxK);
+		}
+
+		/* Reduce per-individual `K` relative to it's latitudinal distance from the
+		extinction front `shrink` */
+		slope_reduce = pmax(shrink - lats, 0.0);
+		return scaleK - (scaleK * slope_reduce);
+	}
+}
+
+
+function (void) print_params(void) {
+	/* print parameter Dictionary in a more legible way. */
+	for (key in params.allKeys) {
+		cat(key + " = ");
+		catn(params.getValue(key));
+	}
+}
+
+
+function (void) set_param(string$ symbol, * value) {
+	/* define parameter as global variable and set it in parameter Dictionary */
+	defineGlobal(symbol, value);
+	params.setValue(symbol, value);
+}
+
+
+initialize() {
+	/* `InputTreeSeq` to be defined through CLI like so:
+		`slim -d InputTreeSeq=path/to/file.trees` */
+	if (exists("slimgui")) {
+		/* ... or load trees file for debugging in slimgui */
+		defineGlobal("InputTreeSeq", "./output/TMP-FILE.precap.trees");
+	}
+
+	/* load simulation Arguments from tree sequence metadata. this allows us to
+	integrate the SLiMulation in a larger pipeline where all communication
+	between steps is mediated through the tree sequence data structure. */
+	params = treeSeqMetadata(InputTreeSeq, userData=F).getValue("Arguments");
+	params.setValue("InputTreeSeq", InputTreeSeq);
+
+	for (k in params.allKeys) {
+		if (k != "InputTreeSeq")
+			defineGlobal(k, params.getValue(k));
+	}
+	defineGlobal("params", params);
+
+	/* NOTE: to change `params` for debugging, do it HERE like so:
+		`set_param("ExtinctMode", "slope");`
+    */
+
+	/* define some SLiM-specific variables that we don't need to track
+	in `params`. */
+	defineGlobal("maxK", N);
+	defineGlobal("outfn", BaseFn + ".fwd.trees");
+	defineGlobal("logfn", BaseFn + ".fwd.log.tsv");
+
+	/* this somewhat hackily defines at which generations to take temporal
+	samples, relative to `GenSwitchK` and `ReduceStepK`. currently optimized
+	for `ExtinctMode=="step"`. */
+	set_param("gremember",
+		asInteger(
+		c(GenSwitchK - 1,
+		GenSwitchK + seq(1, 1/ReduceStepK, 100),
+		seq(-79+GenSwitchK+1/ReduceStepK, GenSwitchK+1/ReduceStepK, 20),
+		seq(-14+GenSwitchK+1/ReduceStepK, GenSwitchK+1/ReduceStepK, 2)))
+		);
+
+	/* finally getting to the normal SLiM-style init block */
+	initializeSLiMModelType("nonWF");
+	initializeSLiMOptions(dimensionality="xy");
+	initializeTreeSeq();
+	initializeMutationType("m1", 0.5, "n", 0.0, SigmaA);
+	initializeGenomicElementType("g1", m1, 1.0);
+	initializeGenomicElement(g1, 0, L-1);
+	initializeRecombinationRate(RecombRate);
+	initializeMutationRate((MutRate * FractionFunc));
+
+	/* spatial competition */
+	initializeInteractionType(1, "xy", reciprocal=T, maxDistance=sComp * 3);
+	i1.setInteractionFunction("n", 1.0, sComp);
+
+	/* spatial mate choice */
+	initializeInteractionType(2, "xy", reciprocal=T, maxDistance=sMate * 3);
+	i2.setInteractionFunction("n", 1.0, sMate);
+}
+
+first() {
+	/* evaluate mate choice kernel first, so everything is set for reproduction */
+	i2.evaluate();
+}
+
+reproduction() {
+	/* non-WF models require us to generate offspring manually. here, a litter
+	size is sampled from a poisson based on user-defined `Fertility`. if the
+	focal `individual` is of fertile age (`FertAge`), it chooses a mate based on
+	spatial proximity and generates `litterSize` number of offspring. */
+	litterSize = rpois(1, Fertility);
+
+	if (litterSize & (individual.age >= FertAge)) {
+		mates = i2.nearestNeighbors(individual, 10);
+		mates = mates[mates.age >= FertAge]; /* mates need to be of `FertAge` too */
+
+		if (mates.size()) {
+			mate = sample(mates, 1, weights=i2.strength(individual, mates));
+			for (i in seqLen(litterSize)) {
+				offspring = subpop.addCrossed(individual, mate);
+
+				/* place offspring in space */
+				do pos = individual.spatialPosition + rnorm(2, 0, sDisp);
+				while (!p0.pointInBounds(pos));
+				offspring.setSpatialPosition(pos);
+			}
+		}
+	}
+}
+
+1 early() { /* setup block */
+	print_params();
+	sim.rescheduleScriptBlock(s1, generations=gremember); /* schedule sampling */
+	sim.rescheduleScriptBlock(s2, start=StopGen, end=StopGen); /* schedule termination */
+
+	sim.readFromPopulationFile(InputTreeSeq); /* read "pre-capitation" */
+	p0.individuals.setSpatialPosition(p0.pointUniform(p0.individualCount));
+
+	/* `scaleK` should be used to track if `maxK` gets modified at any point.
+	(e.g. during extinction). */
+	sim.setValue("scaleK", maxK);
+
+	/* set up logfile */
+	log = sim.createLogFile(logfn, sep="\t", logInterval=10);
+	log.addGeneration();
+	log.addCustomColumn("N", "length(sim.subpopulations.individuals);");
+	log.addCustomColumn("scaleK", "sim.getValue('scaleK');");
+	log.addMeanSDColumns("phenotype", "sim.subpopulations.individuals.tagF;");
+	log.addMeanSDColumns("age", "sim.subpopulations.individuals.age;");
+}
+
+early() { /* fitness scaling block */
+	inds = sim.subpopulations.individuals;
+	/* all fitness calculation and scaling happens here. each individuals' fitness
+	consists of three components, which are grouped in blocks below: age effects,
+	phenotype (under stabilizing selection), and spatial competition. these have
+	to be properly scaled relatively to each other, to produce a desirable fitness
+	distribution. */
+
+	/* absolute fitness decreases non-linearly with age.
+	age-related mortality is 0.0 at age 0, and 1.0 at age `MaxAge` */
+	age_effect = sqrt((MaxAge - inds.age) / MaxAge);
+	inds.fitnessScaling = inds.fitnessScaling * age_effect;
+
+	/* `phenotypes` holds the sum of effect sizes of mutations of type `m1` for
+	each individual. these can optionally be scaled through `pscale` to reduce
+	their effect for a duration of `PhenoBurn`. one of two environmental optima is
+	chosen based on the current generation. the contribution of each individuals'
+	phenotype to its fitness is then based on the phenotype's deviation from the
+	optimum, using a Gaussian fitness function. the minimum of that contribution
+	is (arbitrarily) chosen to be 0.1, i.e. the additive phenotype alone cannot be
+	lethal. */
+	phenotypes = inds.sumOfMutationsOfType(m1);
+	pscale = pmin(1.0, sqrt(sim.generation/PhenoBurn));
+	phenotypes = phenotypes * pscale;
+	optimum = (sim.generation < GenSwitchEnv) ? EnvOpt1 else EnvOpt2;
+	deviations = optimum - phenotypes;
+	fitnessFunctionMax = dnorm(0.0, 0.0, WidthFitnessFunc);
+	adaptation = dnorm(deviations, 0.0, WidthFitnessFunc) / fitnessFunctionMax;
+	inds.fitnessScaling = inds.fitnessScaling * (0.1 + adaptation * 0.9);
+	inds.tagF = phenotypes;
+
+	/* the fitness effect of spatial competition is based on the local population
+	density felt by each individual. this competition effect has to be scaled by
+	the current mean fitness (`scaled_comp`) since it is also the way we control
+	population growth. the final fitness effect is calculated as carrying capacity
+	(per individual through `getSpatialK()`, to control extinction dynamics)
+	devided by spatial competition to ensure the population to stay below the
+	carrying capacity defined for the simulation. if we didn't scale competition
+	by mean fitness, our population would be much smaller than `K`, since all
+	other fitness effects are already reducing fitness (age, deviation from
+	phenotypic optimum).
+	there are two options here to fine-tune behaviour:
+	`AbsoluteCompetition` (default T) and `LowDensityBenefit` (default F).
+	setting the former scales capacity by habitat size, such that reduction of
+	habitat by 50% also means a 50% reduction in carrying capacity (without this
+	option, the habitat will just become more densely populated).
+	setting the latter will lead to a fitness benefit at low population density
+	(e.g. on the extinction edge). without it, absence of competition can lead at
+	most to an absolute fitness effect of 1.0, which will often be desirable for
+	proper interaction with the other fitness effects above. */
+	i1.evaluate();
+	competition = i1.localPopulationDensity(inds);
+	if (!AbsoluteCompetition)
+		competition = length(inds) * (competition / (mean(competition) + epsilon));
+	if (!LowDensityBenefit)
+		competition = pmax(competition, asFloat(maxK));
+	scaled_comp = competition * mean(inds.fitnessScaling);
+	carryEffect = getSpatialK() / (scaled_comp + epsilon);
+	inds.fitnessScaling = inds.fitnessScaling * carryEffect;
+}
+
+fitness(m1) {
+	/* `m1` mutations have no direct fitness effect! */
+	return 1.0;
+}
+
+late() {
+	if (p0.individualCount == 0) {
+		/* terminate simulation if population has gone extinct. */
+		catn("Extinction in generation " + sim.generation + ".");
+		sim.treeSeqOutput(outfn, metadata=params);
+		sim.simulationFinished();
+	}
+
+	for (ind in sim.subpopulations.individuals) {
+		/* individual dispersal at the end of each generation. */
+		do newPos = ind.spatialPosition + runif(2, sDisp * -2, sDisp * 2);
+		while (!p0.pointInBounds(newPos));
+		ind.setSpatialPosition(newPos);
+	}
+}
+
+s1 late() { /* code block for temporal sampling. */
+	catn("Saving generation: " + sim.generation);
+	sim.treeSeqRememberIndividuals(sample(p0.individuals, pmin(SampleSize, p0.individualCount)));
+}
+
+s2 late() { /* code block to end the simulation. */
+	sim.treeSeqOutput(outfn, metadata=params);
+	sim.simulationFinished();
+}

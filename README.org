@@ -1,0 +1,31 @@
+* Super Preliminary README (Sorry!)
+** Files
+- ~default_fwd.slim~
+  - default SLiM code, called from ~Simulation.py~
+- ~Simulation.py~
+  - Simulation driver, /should/ handle everything!
+  - see CLI options with ~python Simulation.py --help~
+- ~analyse_ts.py~
+  - script for spatial ~SampleSet~ analysis
+  - run with base-name of ~finished~ tree sequence file
+
+** Initial setup & Full workflow
+Note that this expects a recent version of ~SLiM~ to be installed at
+~./SLiM/bin/slim~ (though this path can be changed using the ~--SlimBin~ option
+to ~Simulation.py~).
+Also, you'll need a fairly recent version of ~python3~ for all this to work (I'm
+not sure which exact version number though).
+
+*** Setup (using python virtualenv)
+#+begin_src bash
+  python -m venv venv
+  source venv/bin/activate
+  pip install -r requirements.txt
+#+end_src
+
+*** Run
+#+begin_src bash
+  mkdir output
+  python Simulation.py # uses DefaultArgsClass config
+  python analyse_ts.py output/TMP-FILE
+#+end_src
