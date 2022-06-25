@@ -9,7 +9,7 @@ from tspipe import *
 
 # ------------------------- ------------------------- #
 @dataclass
-class DefaultArgsClass(Arguments):
+class TestingArgs(Arguments):
     BaseFn: str = "./output/TMP-FILE"
     SlimSrc: str = "./default_fwd.slim"
     SlimBin: str = "./SLiM/bin/slim"
@@ -42,16 +42,6 @@ class DefaultArgsClass(Arguments):
     EnvOpt1: float = 0.0
     EnvOpt2: float = 10.0
     epsilon: float = 1e-8
-
-@dataclass
-class MyArgsClass(DefaultArgsClass):
-    BaseFn: str = "./output/N20k_step"
-    N: int = 20000
-    sDisp: float = 0.005
-    PhenoBurn: int = 1000
-    GenSwitchK: int = 5000
-    GenSwitchEnv: int = 15000
-    StopGen: int = 10000
 
 
 # ------------------------- ------------------------- #
@@ -159,8 +149,7 @@ class MyNeutralMut(AddNeutralMut):
 
 # ------------------------- ------------------------- #
 if __name__ == "__main__":
-    args = parse(DefaultArgsClass)
-#    args = parse(MyArgsClass)
+    args = parse(TestingArgs)
     print(f"Running with args: {args}")
     sim = Simulation(
         args, precap=MyPrecapSim(), fwdsim=FwdSim(), neutral=MyNeutralMut()
