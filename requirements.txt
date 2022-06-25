@@ -1,9 +1,0 @@
-numpy
-pandas
-matplotlib
-numba
-scipy
-tskit
-msprime
-pyslim
-datargs

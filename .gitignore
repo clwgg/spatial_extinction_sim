@@ -7,3 +7,5 @@ sync
 __pycache__
 .venv
 venv
+build
+*egg-info
