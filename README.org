@@ -1,31 +1,48 @@
-* Super Preliminary README (Sorry!)
-** Files
-- ~default_fwd.slim~
-  - default SLiM code, called from ~Simulation.py~
-- ~Simulation.py~
-  - Simulation driver, /should/ handle everything!
-  - see CLI options with ~python Simulation.py --help~
-- ~analyse_ts.py~
-  - script for spatial ~SampleSet~ analysis
-  - run with base-name of ~finished~ tree sequence file
+* Spatial Simulations with ~tspipe~
+** Project Structure
+- ~tspipe/~
+  - library code for simulation pipeline
+- ~application/~
+  - application code for simulations, using tspipe
+- ~slim/~
+  - SLiM code, called from application code above
+- ~analysis/~
+  - downstream analysis code, to be run on finished simulations
 
-** Initial setup & Full workflow
-Note that this expects a recent version of ~SLiM~ to be installed at
-~./SLiM/bin/slim~ (though this path can be changed using the ~--SlimBin~ option
-to ~Simulation.py~).
-Also, you'll need a fairly recent version of ~python3~ for all this to work (I'm
-not sure which exact version number though).
+** Initial Setup
+Note that this project currently utilizes beta versions of both ~SLiM~ (version
+4.0) and ~pyslim~ (version 1.0).
+~SLiM4~ will have to be downloaded and compiled in addition to the setup of this
+python project, and supplied to the application code via the ~--SlimBin~ option.
 
-*** Setup (using python virtualenv)
+*** Setup (using a python virtual environment)
+
+In the cloned repository folder:
+
 #+begin_src bash
   python -m venv venv
   source venv/bin/activate
-  pip install -r requirements.txt
+  pip install .
 #+end_src
 
-*** Run
+** Spatial Extinction Workflow
+- ~application/test_extinction.py~
+  - simulation driver application to run with testing parameters
+  - see CLI options with ~python application/test_extinction.py --help~
+- ~application/prod_extinction.py~
+  - simulation driver application to run with production parameters
+- ~slim/spatial_extinction.slim~
+  - ~SLiM~ code for spatial extinction, called from ~application/~ code above
+- ~analysis/spatial_stats.py~
+  - script for spatial ~SampleSet~ analysis
+  - run with base-name of ~finished~ tree sequence file
+
+*** Run (with testing parameters)
+
+In the cloned repository folder:
+
 #+begin_src bash
   mkdir output
-  python Simulation.py # uses DefaultArgsClass config
-  python analyse_ts.py output/TMP-FILE
+  python application/test_extinction.py
+  python analysis/spatial_stats.py output/TMP-FILE
 #+end_src
