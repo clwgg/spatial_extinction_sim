@@ -11,8 +11,8 @@ from tspipe import *
 @dataclass
 class TestingArgs(Arguments):
     BaseFn: str = "./output/TMP-FILE"
-    SlimSrc: str = "./default_fwd.slim"
-    SlimBin: str = "./SLiM/bin/slim"
+    SlimSrc: str = "./slim/spatial_extinction.slim"
+    SlimBin: str = "./SLiMv4/bin/slim"
 
     N: int = 1000
     L: int = int(1e8)
@@ -72,7 +72,7 @@ class MyPrecapSim(PreCapSim):
             recombination_rate=args.RecombRate,
         )
 
-        ts = pyslim.annotate_defaults(ts, model_type="nonWF", slim_generation=1)
+        ts = pyslim.annotate(ts, model_type="nonWF", tick=1, annotate_mutations=True)
 
         ts = msprime.sim_mutations(
             ts,
@@ -136,13 +136,11 @@ class MyNeutralMut(AddNeutralMut):
 
     def _make_ts(self, args):
         ts = tskit.load(args.InputTreeSeq)
-        ts = pyslim.SlimTreeSequence(
-            msprime.sim_mutations(
-                ts,
-                rate=args.MutRate * (1 - args.FractionFunc),
-                model=msprime.SLiMMutationModel(type=0),
-                keep=True,
-            )
+        ts = msprime.sim_mutations(
+            ts,
+            rate=args.MutRate * (1 - args.FractionFunc),
+            model=msprime.SLiMMutationModel(type=0),
+            keep=True,
         )
         return ts.simplify()
 

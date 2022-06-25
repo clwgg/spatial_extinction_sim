@@ -23,14 +23,14 @@ function (float) getSpatialK(void) {
 	north. */
 	inds = sim.subpopulations.individuals;
 
-	if (sim.generation < GenSwitchK) {
+	if (community.tick < GenSwitchK) {
 		return rep(asFloat(maxK), length(inds)); /* all individuals "feel" maxK */
 	}
 
 	lats = inds.spatialPosition[seq(1, length(inds)*2-1, 2)]; /* every 2nd coord is a latitude! */
 	assert(length(inds) == length(lats));
 
-	shrink_gen = sim.generation - GenSwitchK;
+	shrink_gen = community.tick - GenSwitchK;
 	shrink = shrink_gen * ReduceStepK; /* this assumes maximum latitute == 1.0 */
 
 	if (ExtinctMode == "step")
@@ -147,7 +147,7 @@ initialize() {
 
 first() {
 	/* evaluate mate choice kernel first, so everything is set for reproduction */
-	i2.evaluate();
+	i2.evaluate(sim.subpopulations);
 }
 
 reproduction() {
@@ -177,8 +177,8 @@ reproduction() {
 
 1 early() { /* setup block */
 	print_params();
-	sim.rescheduleScriptBlock(s1, generations=gremember); /* schedule sampling */
-	sim.rescheduleScriptBlock(s2, start=StopGen, end=StopGen); /* schedule termination */
+	community.rescheduleScriptBlock(s1, ticks=gremember); /* schedule sampling */
+	community.rescheduleScriptBlock(s2, start=StopGen, end=StopGen); /* schedule termination */
 
 	sim.readFromPopulationFile(InputTreeSeq); /* read "pre-capitation" */
 	p0.individuals.setSpatialPosition(p0.pointUniform(p0.individualCount));
@@ -188,8 +188,8 @@ reproduction() {
 	sim.setValue("scaleK", maxK);
 
 	/* set up logfile */
-	log = sim.createLogFile(logfn, sep="\t", logInterval=10);
-	log.addGeneration();
+	log = community.createLogFile(logfn, sep="\t", logInterval=10);
+	log.addCycle();
 	log.addCustomColumn("N", "length(sim.subpopulations.individuals);");
 	log.addCustomColumn("scaleK", "sim.getValue('scaleK');");
 	log.addMeanSDColumns("phenotype", "sim.subpopulations.individuals.tagF;");
@@ -218,9 +218,9 @@ early() { /* fitness scaling block */
 	is (arbitrarily) chosen to be 0.1, i.e. the additive phenotype alone cannot be
 	lethal. */
 	phenotypes = inds.sumOfMutationsOfType(m1);
-	pscale = pmin(1.0, sqrt(sim.generation/PhenoBurn));
+	pscale = pmin(1.0, sqrt(community.tick/PhenoBurn));
 	phenotypes = phenotypes * pscale;
-	optimum = (sim.generation < GenSwitchEnv) ? EnvOpt1 else EnvOpt2;
+	optimum = (community.tick < GenSwitchEnv) ? EnvOpt1 else EnvOpt2;
 	deviations = optimum - phenotypes;
 	fitnessFunctionMax = dnorm(0.0, 0.0, WidthFitnessFunc);
 	adaptation = dnorm(deviations, 0.0, WidthFitnessFunc) / fitnessFunctionMax;
@@ -246,7 +246,7 @@ early() { /* fitness scaling block */
 	(e.g. on the extinction edge). without it, absence of competition can lead at
 	most to an absolute fitness effect of 1.0, which will often be desirable for
 	proper interaction with the other fitness effects above. */
-	i1.evaluate();
+	i1.evaluate(sim.subpopulations);
 	competition = i1.localPopulationDensity(inds);
 	if (!AbsoluteCompetition)
 		competition = length(inds) * (competition / (mean(competition) + epsilon));
@@ -265,9 +265,9 @@ fitness(m1) {
 late() {
 	if (p0.individualCount == 0) {
 		/* terminate simulation if population has gone extinct. */
-		catn("Extinction in generation " + sim.generation + ".");
+		catn("Extinction in generation " + community.tick + ".");
 		sim.treeSeqOutput(outfn, metadata=params);
-		sim.simulationFinished();
+		community.simulationFinished();
 	}
 
 	for (ind in sim.subpopulations.individuals) {
@@ -279,11 +279,13 @@ late() {
 }
 
 s1 late() { /* code block for temporal sampling. */
-	catn("Saving generation: " + sim.generation);
-	sim.treeSeqRememberIndividuals(sample(p0.individuals, pmin(SampleSize, p0.individualCount)));
+	if (p0.individualCount > 0) {
+		catn("Saving generation: " + community.tick);
+		sim.treeSeqRememberIndividuals(sample(p0.individuals, pmin(SampleSize, p0.individualCount)));
+	}
 }
 
 s2 late() { /* code block to end the simulation. */
 	sim.treeSeqOutput(outfn, metadata=params);
-	sim.simulationFinished();
+	community.simulationFinished();
 }

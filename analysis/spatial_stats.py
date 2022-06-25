@@ -4,6 +4,7 @@ import argparse
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import tskit
 import pyslim
 
 from numba import njit
@@ -260,7 +261,7 @@ class SampleSet:
         return np.sum(Va)
 
     def set_timeslice(self, time):
-        alive = self.ts.individuals_alive_at(time)
+        alive = pyslim.individuals_alive_at(self.ts, time)
         alive_intersect = self.meta.index.intersection(alive)
         self._indiv = self.meta.loc[alive_intersect].index.to_numpy()
         self._nodes = self._get_nodes()
@@ -584,7 +585,7 @@ def main(arglist=None):
     basefn = args.basefn
     infile = basefn + ".finished.trees"
 
-    ts = pyslim.load(infile)
+    ts = tskit.load(infile)
     print()
     print(ts)
 
@@ -609,7 +610,7 @@ def main(arglist=None):
     parent.annotate_sites(func, neut)
 
     #----- Metadata
-    endgen = ts.metadata['SLiM']['generation']
+    endgen = ts.metadata['SLiM']['tick']
     time_ago = endgen - np.array(ts.metadata['Arguments']['gremember'] + [endgen])
     time_ago = np.sort(time_ago)[::-1]
 
