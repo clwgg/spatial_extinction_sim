@@ -26,11 +26,11 @@ In the cloned repository folder:
 #+end_src
 
 ** Spatial Extinction Workflow
-- ~application/test_extinction.py~
-  - simulation driver application to run with testing parameters
-  - see CLI options with ~python application/test_extinction.py --help~
-- ~application/prod_extinction.py~
-  - simulation driver application to run with production parameters
+- ~application/extinction_app.py~
+  - simulation driver application
+  - two different parameter sets accessible through subcommands
+  - see ~python application/extinction_app.py --help~
+  - see parameter options with ~python application/extinction_app.py testing --help~
 - ~slim/spatial_extinction.slim~
   - ~SLiM~ code for spatial extinction, called from ~application/~ code above
 - ~analysis/spatial_stats.py~
@@ -43,6 +43,6 @@ In the cloned repository folder:
 
 #+begin_src bash
   mkdir output
-  python application/test_extinction.py
-  python analysis/spatial_stats.py output/TMP-FILE
+  python application/extinction_app.py testing
+  python analysis/spatial_stats.py output/extinct
 #+end_src

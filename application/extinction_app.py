@@ -1,16 +1,16 @@
+from typing import Union
 from dataclasses import dataclass
 import numpy as np
 import tskit
 import msprime
 import pyslim
-from datargs import parse
+from datargs import parse, argsclass
 
 from tspipe import *
 
 # ------------------------- ------------------------- #
 @dataclass
-class TestingArgs(Arguments):
-    BaseFn: str = "./output/TMP-FILE"
+class BaseArgs(Arguments):
     SlimSrc: str = "./slim/spatial_extinction.slim"
     SlimBin: str = "./SLiMv4/bin/slim"
 
@@ -43,6 +43,23 @@ class TestingArgs(Arguments):
     EnvOpt2: float = 10.0
     epsilon: float = 1e-8
 
+@dataclass
+class Testing(BaseArgs):
+    BaseFn: str = "./output/extinct"
+
+@dataclass
+class Production(BaseArgs):
+    BaseFn: str = "./output/extinct_N20k"
+    N: int = 20000
+    sDisp: float = 0.005
+    PhenoBurn: int = 1000
+    GenSwitchK: int = 5000
+    GenSwitchEnv: int = 15000
+    StopGen: int = 10000
+
+@argsclass
+class ArgsDriver:
+    model: Union[Testing, Production]
 
 # ------------------------- ------------------------- #
 class MyPrecapSim(PreCapSim):
@@ -147,9 +164,9 @@ class MyNeutralMut(AddNeutralMut):
 
 # ------------------------- ------------------------- #
 if __name__ == "__main__":
-    args = parse(TestingArgs)
-    print(f"Running with args: {args}")
+    args = parse(ArgsDriver)
+    print(f"Running model with args: {args.model}")
     sim = Simulation(
-        args, precap=MyPrecapSim(), fwdsim=FwdSim(), neutral=MyNeutralMut()
+        args.model, precap=MyPrecapSim(), fwdsim=FwdSim(), neutral=MyNeutralMut()
     )
     tsfp = sim.run()
