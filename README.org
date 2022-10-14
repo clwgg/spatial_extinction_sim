@@ -10,10 +10,9 @@
   - downstream analysis code, to be run on finished simulations
 
 ** Initial Setup
-Note that this project currently utilizes beta versions of both ~SLiM~ (version
-4.0) and ~pyslim~ (version 1.0).
-~SLiM4~ will have to be downloaded and compiled in addition to the setup of this
-python project, and supplied to the application code via the ~--SlimBin~ option.
+~SLiM~ (version 4) will have to be downloaded and compiled in addition to the
+setup of this python project, and supplied to the application code via the
+~--SlimBin~ option.
 
 *** Setup (using a python virtual environment)
 

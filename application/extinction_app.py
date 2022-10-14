@@ -12,7 +12,7 @@ from tspipe import *
 @dataclass
 class BaseArgs(Arguments):
     SlimSrc: str = "./slim/spatial_extinction.slim"
-    SlimBin: str = "./SLiMv4/bin/slim"
+    SlimBin: str = "./SLiM/bin/slim"
 
     N: int = 1000
     L: int = int(1e8)
