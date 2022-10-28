@@ -23,15 +23,17 @@ function (float) getSpatialK(void) {
 	north. */
 	inds = sim.subpopulations.individuals;
 
-	if (community.tick < GenSwitchK) {
+	if (community.tick <= GenStartShrink) {
 		return rep(asFloat(maxK), length(inds)); /* all individuals "feel" maxK */
 	}
 
 	lats = inds.spatialPosition[seq(1, length(inds)*2-1, 2)]; /* every 2nd coord is a latitude! */
 	assert(length(inds) == length(lats));
 
-	shrink_gen = community.tick - GenSwitchK;
-	shrink = shrink_gen * ReduceStepK; /* this assumes maximum latitute == 1.0 */
+	if (community.tick <= GenStopShrink) {
+		defineGlobal("shrinkgen", community.tick - GenStartShrink);
+	}
+	shrink = shrinkgen * ReduceStepK; /* this assumes maximum latitute == 1.0 */
 
 	if (ExtinctMode == "step")
 	{ /* K=maxK for individuals at latitudes > shrink, K=0.0 otherwise */
@@ -112,6 +114,7 @@ initialize() {
 	/* define some SLiM-specific variables that we don't need to track
 	in `params`. */
 	defineGlobal("maxK", N);
+	defineGlobal("shrinkgen", 0);
 	defineGlobal("outfn", BaseFn + ".fwd.trees");
 	defineGlobal("logfn", BaseFn + ".fwd.log.tsv");
 

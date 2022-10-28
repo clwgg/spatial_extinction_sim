@@ -22,7 +22,8 @@ class BaseArgs(Arguments):
     SigmaA: float = 0.1
     PhenoBurn: int = 100
 
-    GenSwitchK: int = 2000
+    GenStartShrink: int = 2000
+    GenStopShrink: int = 5000
     GenSwitchEnv: int = 5000
     StopGen: int = 4000
 
@@ -80,7 +81,9 @@ class Production(BaseArgs):
     N: int = 20000
     sDisp: float = 0.005
     PhenoBurn: int = 1000
-    GenSwitchK: int = 5000
+
+    GenStartShrink: int = 5000
+    GenStopShrink: int = 15000
     GenSwitchEnv: int = 15000
     StopGen: int = 10000
 
