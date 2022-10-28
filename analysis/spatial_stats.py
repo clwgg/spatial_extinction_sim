@@ -611,7 +611,7 @@ def main(arglist=None):
 
     #----- Metadata
     endgen = ts.metadata['SLiM']['tick']
-    time_ago = endgen - np.array(ts.metadata['Arguments']['gremember'] + [endgen])
+    time_ago = endgen - np.array(ts.metadata['Arguments']['RememberGen'] + [endgen])
     time_ago = np.sort(time_ago)[::-1]
 
     #----- Set up output structure

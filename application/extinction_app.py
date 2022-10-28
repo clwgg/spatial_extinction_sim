@@ -1,10 +1,10 @@
-from typing import Union
+from typing import Union, List, Optional
 from dataclasses import dataclass
+from datargs import parse, argsclass
 import numpy as np
 import tskit
 import msprime
 import pyslim
-from datargs import parse, argsclass
 
 from tspipe import *
 
@@ -42,6 +42,33 @@ class BaseArgs(Arguments):
     EnvOpt1: float = 0.0
     EnvOpt2: float = 10.0
     epsilon: float = 1e-8
+
+    RememberGen: Optional[List[int]] = None
+
+    def __post_init__(self):
+        if not self.RememberGen:
+            self.RememberGen = self._get_RememberGen()
+
+    @staticmethod
+    def _seq(start, end, step):
+        """ Emulate SLiM `seq()` behaviour """
+        return list(range(start, end+1, step))
+
+    def _get_RememberGen(self) -> List[int]:
+        """ NOTE:
+        this somewhat hackily defines at which generations to take temporal
+        samples, relative to `GenStartShrink` and `ReduceStepK`. currently
+        hacked together for `ExtinctMode=="step"`.
+        """
+        one_over_step = int(1/self.ReduceStepK)
+        return (
+            [self.GenStartShrink -1] +
+            [self.GenStartShrink + i for i in range(1, one_over_step, 100)] +
+            self._seq(-79+self.GenStartShrink+one_over_step,
+                      self.GenStartShrink+one_over_step, 20) +
+            self._seq(-14+self.GenStartShrink+one_over_step,
+                      self.GenStartShrink+one_over_step, 2)
+        )
 
 @dataclass
 class Testing(BaseArgs):

@@ -115,17 +115,6 @@ initialize() {
 	defineGlobal("outfn", BaseFn + ".fwd.trees");
 	defineGlobal("logfn", BaseFn + ".fwd.log.tsv");
 
-	/* this somewhat hackily defines at which generations to take temporal
-	samples, relative to `GenSwitchK` and `ReduceStepK`. currently optimized
-	for `ExtinctMode=="step"`. */
-	set_param("gremember",
-		asInteger(
-		c(GenSwitchK - 1,
-		GenSwitchK + seq(1, 1/ReduceStepK, 100),
-		seq(-79+GenSwitchK+1/ReduceStepK, GenSwitchK+1/ReduceStepK, 20),
-		seq(-14+GenSwitchK+1/ReduceStepK, GenSwitchK+1/ReduceStepK, 2)))
-		);
-
 	/* finally getting to the normal SLiM-style init block */
 	initializeSLiMModelType("nonWF");
 	initializeSLiMOptions(dimensionality="xy");
@@ -177,7 +166,7 @@ reproduction() {
 
 1 early() { /* setup block */
 	print_params();
-	community.rescheduleScriptBlock(s1, ticks=gremember); /* schedule sampling */
+	community.rescheduleScriptBlock(s1, ticks=RememberGen); /* schedule sampling */
 	community.rescheduleScriptBlock(s2, start=StopGen, end=StopGen); /* schedule termination */
 
 	sim.readFromPopulationFile(InputTreeSeq); /* read "pre-capitation" */
