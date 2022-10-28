@@ -76,6 +76,23 @@ class Testing(BaseArgs):
     BaseFn: str = "./output/extinct"
 
 @dataclass
+class ExtinctHalfTest(BaseArgs):
+    BaseFn: str = "./output/extinct_half"
+    FractionFunc: float = 0.0
+    ReduceStepK: float = 0.5
+    GenStartShrink: int = 2000
+    GenStopShrink: int = 2001
+    GenSwitchEnv: int = 5000
+    StopGen: int = 3000
+
+    def _get_RememberGen(self) -> List[int]:
+        return (
+            [self.GenStartShrink, self.GenStopShrink] +
+            self._seq(self.GenStartShrink + 5,
+                      self.GenStartShrink + 100, 5)
+        )
+
+@dataclass
 class Production(BaseArgs):
     BaseFn: str = "./output/extinct_N20k"
     N: int = 20000
@@ -89,7 +106,7 @@ class Production(BaseArgs):
 
 @argsclass
 class ArgsDriver:
-    model: Union[Testing, Production]
+    model: Union[Testing, Production, ExtinctHalfTest]
 
 # ------------------------- ------------------------- #
 class MyPrecapSim(PreCapSim):
