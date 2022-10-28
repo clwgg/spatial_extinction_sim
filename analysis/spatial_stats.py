@@ -620,7 +620,7 @@ def main(arglist=None):
         "sample_size": [],
         "area_occupied": [],
         "num_segregating": [],
-        "Va": [],
+        "pi": [],
         "zmar": [],
         "fstavg": [],
         "fstmax": [],
@@ -643,33 +643,43 @@ def main(arglist=None):
 
         set_list.append((time, s))
 
-    #----- AFS split by site type - pre-extinction
-    print("Generating AFS plots...")
-    time, s = set_list[0]
-    afs_func, afs_neut = s.split_afs()
-    ages_func, ages_neut =s.split_aage(time)
-    fig = plt.figure(tight_layout=True, figsize=(15, 8))
-    plot_afs((afs_func, afs_neut), (ages_func, ages_neut),
-             fig, ([1,2,1], [1,2,2]))
-    plt.savefig(f"{basefn}_afs_pre-extinct.pdf")
-    plt.close()
-
-    #----- AFS split by site type - through time
-    fig = plt.figure(tight_layout=True, figsize=(15, 5 * len(set_list)))
-    idx = 1
-    step = 3
-    for time, s in set_list:
-        ax = fig.add_subplot(len(set_list), step, idx)
-        ax.plot(s.meta.Longitude, s.meta.Latitude, "k.", alpha=0.5)
-        ax.set_xlim(0, 1); ax.set_ylim(0, 1)
+    if len(func) > 0:
+        #----- AFS split by site type - pre-extinction
+        print("Generating AFS plots...")
+        time, s = set_list[0]
         afs_func, afs_neut = s.split_afs()
         ages_func, ages_neut =s.split_aage(time)
+        fig = plt.figure(tight_layout=True, figsize=(15, 8))
         plot_afs((afs_func, afs_neut), (ages_func, ages_neut),
-                 fig, ([len(set_list), step, idx+1],
-                       [len(set_list), step, idx+2]))
-        idx += step
-    plt.savefig(f"{basefn}_afs_timeseries.pdf")
-    plt.close()
+                fig, ([1,2,1], [1,2,2]))
+        plt.savefig(f"{basefn}_afs_pre-extinct.pdf")
+        plt.close()
+
+        #----- AFS split by site type - through time
+        fig = plt.figure(tight_layout=True, figsize=(15, 5 * len(set_list)))
+        idx = 1
+        step = 3
+        for time, s in set_list:
+            ax = fig.add_subplot(len(set_list), step, idx)
+            ax.plot(s.meta.Longitude, s.meta.Latitude, "k.", alpha=0.5)
+            ax.set_xlim(0, 1); ax.set_ylim(0, 1)
+            afs_func, afs_neut = s.split_afs()
+            ages_func, ages_neut =s.split_aage(time)
+            plot_afs((afs_func, afs_neut), (ages_func, ages_neut),
+                    fig, ([len(set_list), step, idx+1],
+                        [len(set_list), step, idx+2]))
+            idx += step
+        plt.savefig(f"{basefn}_afs_timeseries.pdf")
+        plt.close()
+
+        #----- Va through time
+        print("Calculating relative Va...")
+        time, s = set_list[0]
+        Va_pre_extinct = s.calc_Va()
+        time_dict["Va"] = []
+        for time, s in set_list:
+            time_dict["Va"].append(
+            s.calc_Va() / Va_pre_extinct)
 
     #----- number of segregating sites through time
     print("Getting total number of segregating sites...")
@@ -677,13 +687,21 @@ def main(arglist=None):
         time_dict["num_segregating"].append(
             s.seg_sites().squeeze().astype(int))
 
-    #----- Va through time
-    print("Calculating relative Va...")
-    time, s = set_list[0]
-    Va_pre_extinct = s.calc_Va()
+    #----- pi through time
+    pi_dict = {
+        "area": [], "pi": [], "time": [], "n": [],
+    }
+    print("Getting pi...")
     for time, s in set_list:
-        time_dict["Va"].append(
-        s.calc_Va() / Va_pre_extinct)
+        time_dict["pi"].append(s.diversity.squeeze())
+        grid_slices = s.area_slices_grid(0.1)
+        for gs in grid_slices:
+            pi_dict["area"].append(gs.area_size)
+            pi_dict["pi"].append(gs.diversity.squeeze())
+            pi_dict["time"].append(time)
+            pi_dict["n"].append(len(gs.meta))
+    pd.DataFrame(pi_dict).to_csv(
+        f"{basefn}_pi.tsv", sep="\t", index=False)
 
     #----- zmar through time
     def powerlaw(x, c, z):
