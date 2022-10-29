@@ -27,7 +27,7 @@ In the cloned repository folder:
 ** Spatial Extinction Workflow
 - ~application/extinction_app.py~
   - simulation driver application
-  - two different parameter sets accessible through subcommands
+  - different parameter sets accessible through subcommands
   - see ~python application/extinction_app.py --help~
   - see parameter options with ~python application/extinction_app.py testing --help~
 - ~slim/spatial_extinction.slim~
