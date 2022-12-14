@@ -185,7 +185,7 @@ reproduction() {
 	log.addCustomColumn("N", "length(sim.subpopulations.individuals);");
 	log.addCustomColumn("scaleK", "sim.getValue('scaleK');");
 	log.addMeanSDColumns("phenotype", "sim.subpopulations.individuals.tagF;");
-	log.addMeanSDColumns("age", "sim.subpopulations.individuals.age;");
+	log.addMeanSDColumns("ParentAge", "sim.subpopulations.individuals.meanParentAge;");
 }
 
 early() { /* fitness scaling block */

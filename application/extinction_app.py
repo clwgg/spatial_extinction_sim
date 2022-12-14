@@ -37,9 +37,12 @@ class BaseArgs(Arguments):
     sDisp: float = 0.01
     sComp: float = 0.05
     sMate: float = 0.05
+
     MaxAge: int = 10
     FertAge: int = 3
     Fertility: float = 0.5
+    GenTime: float = 4.5 # NOTE: Important to adjust - emergent property of fwd sim!
+
     EnvOpt1: float = 0.0
     EnvOpt2: float = 10.0
     epsilon: float = 1e-8
@@ -120,12 +123,15 @@ class MyPrecapSim(PreCapSim):
             "MutRate",
             "RecombRate",
             "SigmaA",
+            "GenTime",
         ]
         for argument in required:
             assert hasattr(args, argument)
 
     def _base_sim(self, args):
-        Ne = args.N  # Revisit this based on Generation Time!
+        Ne = args.N * args.GenTime
+        MutRate = args.MutRate / args.GenTime
+        RecombRate = args.RecombRate / args.GenTime
 
         demog_model = msprime.Demography()
         demog_model.add_population(initial_size=Ne)
@@ -133,14 +139,14 @@ class MyPrecapSim(PreCapSim):
             samples=args.N,
             demography=demog_model,
             sequence_length=args.L,
-            recombination_rate=args.RecombRate,
+            recombination_rate=RecombRate,
         )
 
         ts = pyslim.annotate(ts, model_type="nonWF", tick=1, annotate_mutations=True)
 
         ts = msprime.sim_mutations(
             ts,
-            rate=(args.MutRate * args.FractionFunc),
+            rate=(MutRate * args.FractionFunc),
             keep=True,
             model=msprime.SLiMMutationModel(type=1),
         )
@@ -193,16 +199,19 @@ class MyNeutralMut(AddNeutralMut):
         required = [
             "FractionFunc",
             "MutRate",
+            "GenTime",
             "InputTreeSeq",
         ]
         for argument in required:
             assert hasattr(args, argument)
 
     def _make_ts(self, args):
+        MutRate = args.MutRate / args.GenTime
+
         ts = tskit.load(args.InputTreeSeq)
         ts = msprime.sim_mutations(
             ts,
-            rate=args.MutRate * (1 - args.FractionFunc),
+            rate=MutRate * (1 - args.FractionFunc),
             model=msprime.SLiMMutationModel(type=0),
             keep=True,
         )
