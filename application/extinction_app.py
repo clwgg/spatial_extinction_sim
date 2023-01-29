@@ -6,7 +6,7 @@ import tskit
 import msprime
 import pyslim
 
-from tspipe import *
+from ts_ipc import *
 
 # ------------------------- ------------------------- #
 @dataclass

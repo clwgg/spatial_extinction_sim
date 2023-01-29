@@ -1,0 +1,9 @@
+pandas
+matplotlib
+numba
+scipy
+tskit>=0.5
+msprime>=1.1
+pyslim>=1.0
+datargs
+git+https://github.com/clwgg/ts-ipc@main

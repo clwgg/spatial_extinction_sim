@@ -1,9 +1,7 @@
-* Spatial Simulations with ~tspipe~
+* Spatial extinction simulations with ~ts-ipc~
 ** Project Structure
-- ~tspipe/~
-  - library code for simulation pipeline
 - ~application/~
-  - application code for simulations, using tspipe
+  - application code for simulations, using ts-ipc
 - ~slim/~
   - SLiM code, called from application code above
 - ~analysis/~
@@ -21,7 +19,7 @@ In the cloned repository folder:
 #+begin_src bash
   python -m venv venv
   source venv/bin/activate
-  pip install .
+  pip install -r requirements.txt
 #+end_src
 
 ** Spatial Extinction Workflow
