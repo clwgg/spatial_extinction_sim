@@ -79,23 +79,6 @@ class Testing(BaseArgs):
     BaseFn: str = "./output/extinct"
 
 @dataclass
-class ExtinctHalfTest(BaseArgs):
-    BaseFn: str = "./output/extinct_half"
-    FractionFunc: float = 0.0
-    ReduceStepK: float = 0.5
-    GenStartShrink: int = 2000
-    GenStopShrink: int = 2001
-    GenSwitchEnv: int = 5000
-    StopGen: int = 3000
-
-    def _get_RememberGen(self) -> List[int]:
-        return (
-            [self.GenStartShrink, self.GenStopShrink] +
-            self._seq(self.GenStartShrink + 5,
-                      self.GenStartShrink + 100, 5)
-        )
-
-@dataclass
 class Production(BaseArgs):
     BaseFn: str = "./output/extinct_N20k"
     N: int = 20000
@@ -107,9 +90,48 @@ class Production(BaseArgs):
     GenSwitchEnv: int = 15000
     StopGen: int = 10000
 
+
+@dataclass
+class ExtinctHalfTest(BaseArgs):
+    BaseFn: str = "./output/extinct_half"
+    N: int = 2000
+    sDisp: float = 0.01
+    FractionFunc: float = 0.0
+    ReduceStepK: float = 0.5
+    GenStartShrink: int = 2000
+    GenStopShrink: int = 2001
+    GenSwitchEnv: int = 5000
+    StopGen: int = 3000
+
+    def _get_RememberGen(self) -> List[int]:
+        return (
+            [self.GenStartShrink, self.GenStopShrink] +
+            self._seq(self.GenStartShrink + 25,
+                      self.GenStartShrink + 1000 - 1, 25)
+        )
+
+@dataclass
+class ExtinctHalf(ExtinctHalfTest):
+    BaseFn: str = "./output/extinct_half_N5k"
+    N: int = 5000
+    sDisp: float = 0.01
+    GenStartShrink: int = 20000
+    GenStopShrink:  int = 20001
+    GenSwitchEnv:   int = 50000
+    StopGen:        int = 40000
+
+    SampleSize: int = 2000
+
+    def _get_RememberGen(self) -> List[int]:
+        return (
+            [self.GenStartShrink, self.GenStopShrink] +
+            self._seq(self.GenStartShrink + 500,
+                      self.GenStartShrink + 20000 - 1, 500)
+        )
+
 @argsclass
 class ArgsDriver:
-    model: Union[Testing, Production, ExtinctHalfTest]
+    model: Union[Testing, Production, ExtinctHalfTest, ExtinctHalf]
 
 # ------------------------- ------------------------- #
 class MyPrecapSim(PreCapSim):
