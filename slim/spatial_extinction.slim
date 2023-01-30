@@ -57,7 +57,7 @@ function (float) getSpatialK(void) {
 	}
 
 	if (ExtinctMode == "slope")
-	{ /* K=maxK for individuals at latitudes > shrink, K=0.0 otherwise */
+	{ 
 		
 		if (shrink <= 1.0) {
 			/* this will be true for the first 1/ReduceStepK generations of extinction */
@@ -73,12 +73,12 @@ function (float) getSpatialK(void) {
 			population establish until the end of the simulation, or drive it to
 			extinction by reducing its maximum carrying capacity over time (`scaleK`)
 			at a user-defined speed (`K_reduce_factor`). */
-			max_reduce = shrink - 1.0; 
-			K_reduce_factor = 1.0;
-			scaleK = maxK - (maxK * max_reduce * K_reduce_factor);
-			sim.setValue("scaleK", scaleK);
-			shrink = 1.0;
-			// scaleK = asFloat(maxK);
+			//max_reduce = shrink - 1.0; 
+			//K_reduce_factor = 1.0;
+			//scaleK = maxK - (maxK * max_reduce * K_reduce_factor);
+			//sim.setValue("scaleK", scaleK);
+			//shrink = 1.0;
+			scaleK = asFloat(maxK);
 		}
 		
 		/* Reduce per-individual `K` relative to it's latitudinal distance from the
