@@ -28,37 +28,19 @@ function (float) getSpatialK(void) {
 	}
 
 	lats = inds.spatialPosition[seq(1, length(inds)*2-1, 2)]; /* every 2nd coord is a latitude! */
-	long = inds.spatialPosition[seq(0, length(inds)*2-1, 2)];
 	assert(length(inds) == length(lats));
 
 	if (community.tick <= GenStopShrink) {
 		defineGlobal("shrinkgen", community.tick - GenStartShrink);
 	}
-	if (HabitatLoss == "warm-edge")
-	{
-		shrink = shrinkgen * ReduceStepK; /* this assumes maximum latitute == 1.0 */
-	}
-	if (HabitatLoss == "radial")
-	{
-		shrink = (shrinkgen * (ReduceStepK/4)); 
-		shrink_top = 1.0 - (shrinkgen * (ReduceStepK/4));
-	} 
+	shrink = shrinkgen * ReduceStepK; /* this assumes maximum latitute == 1.0 */
 
 	if (ExtinctMode == "step")
 	{ /* K=maxK for individuals at latitudes > shrink, K=0.0 otherwise */
-		if (HabitatLoss == "warm-edge")
-		{
-			return ifelse(lats > shrink, asFloat(maxK), 0.0);
-		}
-		if (HabitatLoss == "radial")
-		{ 
-			return ifelse(((lats > shrink) & (lats < shrink_top) & (long > shrink) & (long < shrink_top)), asFloat(maxK), 0.0); 
-		}
+		return ifelse(lats > shrink, asFloat(maxK), 0.0);
 	}
-
 	if (ExtinctMode == "slope")
-	{ 
-		
+	{
 		if (shrink <= 1.0) {
 			/* this will be true for the first 1/ReduceStepK generations of extinction */
 			scaleK = asFloat(maxK);
@@ -73,14 +55,14 @@ function (float) getSpatialK(void) {
 			population establish until the end of the simulation, or drive it to
 			extinction by reducing its maximum carrying capacity over time (`scaleK`)
 			at a user-defined speed (`K_reduce_factor`). */
-			//max_reduce = shrink - 1.0; 
-			//K_reduce_factor = 1.0;
-			//scaleK = maxK - (maxK * max_reduce * K_reduce_factor);
-			//sim.setValue("scaleK", scaleK);
-			//shrink = 1.0;
+			// max_reduce = shrink - 1.0;
+			// K_reduce_factor = 1.0;
+			// scaleK = maxK - (maxK * max_reduce * K_reduce_factor);
+			// sim.setValue("scaleK", scaleK);
+			// shrink = 1.0;
 			scaleK = asFloat(maxK);
 		}
-		
+
 		/* Reduce per-individual `K` relative to it's latitudinal distance from the
 		extinction front `shrink` */
 		slope_reduce = pmax(shrink - lats, 0.0);
