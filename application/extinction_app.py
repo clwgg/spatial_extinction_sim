@@ -93,7 +93,8 @@ class ExtinctHalfTest(BaseArgs):
     StopGen: int = 1000000
     SamplingGen: int = 1000
     NumSamples: int = 10
-    MapSize: int = 5
+    MapSize: int = 6
+    StepSize: int = 0
 
     def _get_RememberGen(self) -> List[int]:
         return (

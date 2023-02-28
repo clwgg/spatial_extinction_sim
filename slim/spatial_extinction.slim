@@ -128,7 +128,7 @@ initialize() {
 	defineGlobal("shrinkgen", 0);
 	defineGlobal("outfn", BaseFn + ".fwd.trees");
 	defineGlobal("logfn", BaseFn + ".fwd.log.tsv");
-	defineConstant("mapVals", matrix(rbinom(MapSize*MapSize, 1, ReduceStepK), ncol=MapSize));
+	defineGlobal("mapVals", matrix(rbinom(MapSize*MapSize, 1, 1.0), ncol=MapSize));
 
 	/* finally getting to the normal SLiM-style init block */
 	initializeSLiMModelType("nonWF");
@@ -154,6 +154,39 @@ first() {
 	i2.evaluate(sim.subpopulations);
 }
 
+first() {
+	if (ExtinctMode == "step"){
+		/* Get mapVals from previous iteration and update mapVals*/
+		if (StepSize == 0){
+			num_zeros = ReduceStepK * (MapSize * MapSize);
+			if (community.tick == GenStartShrink){
+				count=0;
+				for (box in 1:MapSize-1){
+					for (box1 in 1:MapSize-1){
+						if (count < num_zeros){
+							mapVals[box, box1] = 0;
+							count = count+1;
+						}
+					}	
+				}
+			}
+		}
+	}
+	if (ExtinctMode == "random"){
+		if (StepSize == 0){
+			num_zeros = ReduceStepK * (MapSize * MapSize);
+			x = sample(1:MapSize-1, asInteger(num_zeros), replace=T);
+			y = sample(1:MapSize-1, asInteger(num_zeros), replace=T);
+			if (community.tick == GenStartShrink){	
+				for (box in 1:length(x)-1){
+					mapVals[x[box], y[box]] = 0;
+				}
+			}
+			
+		}	
+	}
+}
+
 reproduction() {
 	/* non-WF models require us to generate offspring manually. here, a litter
 	size is sampled from a poisson based on user-defined `Fertility`. if the
@@ -169,7 +202,6 @@ reproduction() {
 			mate = sample(mates, 1, weights=i2.strength(individual, mates));
 			for (i in seqLen(litterSize)) {
 				offspring = subpop.addCrossed(individual, mate);
-
 				/* place offspring in space */
 				do pos = individual.spatialPosition + rnorm(2, 0, sDisp);
 				while (!p0.pointInBounds(pos));
@@ -258,7 +290,9 @@ early() { /* fitness scaling block */
 	if (!LowDensityBenefit)
 		competition = pmax(competition, asFloat(maxK));
 	scaled_comp = competition * mean(inds.fitnessScaling);
-	carryEffect = getSpatialK() / (scaled_comp + epsilon);
+	location = inds.spatialPosition;
+	optimum = sim.subpopulations.spatialMapValue("map1", location);
+	carryEffect = optimum*asFloat(maxK) / (scaled_comp + epsilon);
 	inds.fitnessScaling = inds.fitnessScaling * carryEffect;
 }
 
