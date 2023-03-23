@@ -68,6 +68,17 @@ function (float) getSpatialK(void) {
 		slope_reduce = pmax(shrink - lats, 0.0);
 		return scaleK - (scaleK * slope_reduce);
 	}
+	
+	if (ExtinctMode == "random-fragment"){
+
+                location = inds.spatialPosition;
+                /* get spatialMapValue based on location of spatialPosition */
+                optimum = sim.subpopulations.spatialMapValue("map1", location);
+                /* This would mean that the carrying capacity of individuals in
+                subpopulations where spatialMapValue == 0.0 would get carrying
+                capacity of 0. */
+                return (optimum*asFloat(maxK));
+        }
 }
 
 
@@ -117,6 +128,7 @@ initialize() {
 	defineGlobal("shrinkgen", 0);
 	defineGlobal("outfn", BaseFn + ".fwd.trees");
 	defineGlobal("logfn", BaseFn + ".fwd.log.tsv");
+	defineGlobal("mapVals", matrix(rbinom(MapSize*MapSize, 1, 1.0), ncol=MapSize));
 
 	/* finally getting to the normal SLiM-style init block */
 	initializeSLiMModelType("nonWF");
@@ -142,6 +154,63 @@ first() {
 	i2.evaluate(sim.subpopulations);
 }
 
+first() {
+	if (ExtinctMode == "step"){
+		/* Get mapVals from previous iteration and update mapVals*/
+		if (StepSize == 0){
+			num_zeros = ReduceStepK * (MapSize * MapSize);
+			// hacky code to start warm-edge extinction using spatialMap
+			if (community.tick == GenStartShrink){
+				count=0;
+				for (box in 1:MapSize-1){
+					for (box1 in 1:MapSize-1){
+						if (count < num_zeros){
+							mapVals[box, box1] = 0;
+							count = count+1;
+						}
+					}	
+				}
+			}
+			// hacky code to instantaneously restore available habitat
+			if (GenStartRestore > 0){
+				if (community.tick == GenStartRestore){
+					for (box in 1:MapSize-1){
+						for (box1 in 1:MapSize-1){
+							if (mapVals[box, box1] == 0){
+								mapVals[box, box1] = 1;
+							}
+						}	
+					}
+				}
+			}
+		}
+	}
+	if (ExtinctMode == "random"){
+		if (StepSize == 0){
+			num_zeros = ReduceStepK * (MapSize * MapSize);
+			x = sample(1:MapSize-1, asInteger(num_zeros), replace=T);
+			y = sample(1:MapSize-1, asInteger(num_zeros), replace=T);
+			// hacky code to start habitat fragmentation using spatialMap
+			if (community.tick == GenStartShrink){	
+				for (box in 1:length(x)-1){
+					mapVals[x[box], y[box]] = 0;
+				}
+			}
+			if (GenStartRestore > 0){
+				if (community.tick == GenStartRestore){
+					for (box in 1:MapSize-1){
+						for (box1 in 1:MapSize-1){
+							if (mapVals[box, box1] == 0){
+								mapVals[box, box1] = 1;
+							}
+						}
+					}
+				}
+			}
+		}	
+	}
+}
+
 reproduction() {
 	/* non-WF models require us to generate offspring manually. here, a litter
 	size is sampled from a poisson based on user-defined `Fertility`. if the
@@ -157,7 +226,6 @@ reproduction() {
 			mate = sample(mates, 1, weights=i2.strength(individual, mates));
 			for (i in seqLen(litterSize)) {
 				offspring = subpop.addCrossed(individual, mate);
-
 				/* place offspring in space */
 				do pos = individual.spatialPosition + rnorm(2, 0, sDisp);
 				while (!p0.pointInBounds(pos));
@@ -240,12 +308,15 @@ early() { /* fitness scaling block */
 	proper interaction with the other fitness effects above. */
 	i1.evaluate(sim.subpopulations);
 	competition = i1.localPopulationDensity(inds);
+	sim.subpopulations.defineSpatialMap("map1", "xy", mapVals, F, valueRange=c(0, 1), colors=c("red", "yellow"));
 	if (!AbsoluteCompetition)
 		competition = length(inds) * (competition / (mean(competition) + epsilon));
 	if (!LowDensityBenefit)
 		competition = pmax(competition, asFloat(maxK));
 	scaled_comp = competition * mean(inds.fitnessScaling);
-	carryEffect = getSpatialK() / (scaled_comp + epsilon);
+	location = inds.spatialPosition;
+	optimum = sim.subpopulations.spatialMapValue("map1", location);
+	carryEffect = optimum*asFloat(maxK) / (scaled_comp + epsilon);
 	inds.fitnessScaling = inds.fitnessScaling * carryEffect;
 }
 
