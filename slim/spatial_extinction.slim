@@ -159,6 +159,7 @@ first() {
 		/* Get mapVals from previous iteration and update mapVals*/
 		if (StepSize == 0){
 			num_zeros = ReduceStepK * (MapSize * MapSize);
+			// hacky code to start warm-edge extinction using spatialMap
 			if (community.tick == GenStartShrink){
 				count=0;
 				for (box in 1:MapSize-1){
@@ -170,6 +171,18 @@ first() {
 					}	
 				}
 			}
+			// hacky code to instantaneously restore available habitat
+			if (GenStartRestore > 0){
+				if (community.tick == GenStartRestore){
+					for (box in 1:MapSize-1){
+						for (box1 in 1:MapSize-1){
+							if (mapVals[box, box1] == 0){
+								mapVals[box, box1] = 1;
+							}
+						}	
+					}
+				}
+			}
 		}
 	}
 	if (ExtinctMode == "random"){
@@ -177,12 +190,23 @@ first() {
 			num_zeros = ReduceStepK * (MapSize * MapSize);
 			x = sample(1:MapSize-1, asInteger(num_zeros), replace=T);
 			y = sample(1:MapSize-1, asInteger(num_zeros), replace=T);
+			// hacky code to start habitat fragmentation using spatialMap
 			if (community.tick == GenStartShrink){	
 				for (box in 1:length(x)-1){
 					mapVals[x[box], y[box]] = 0;
 				}
 			}
-			
+			if (GenStartRestore > 0){
+				if (community.tick == GenStartRestore){
+					for (box in 1:MapSize-1){
+						for (box1 in 1:MapSize-1){
+							if (mapVals[box, box1] == 0){
+								mapVals[box, box1] = 1;
+							}
+						}
+					}
+				}
+			}
 		}	
 	}
 }

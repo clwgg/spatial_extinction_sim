@@ -6,13 +6,13 @@ import tskit
 import msprime
 import pyslim
 
-from tspipe import *
+from ts_ipc import *
 
 # ------------------------- ------------------------- #
 @dataclass
 class BaseArgs(Arguments):
     SlimSrc: str = "./slim/spatial_extinction.slim"
-    SlimBin: str = "/software/miniconda3/envs/slim_env/bin/slim"
+    SlimBin: str = "/mnt/lab_data2/kmualim/miniconda3/envs/slim_env/bin/slim"
 
     N: int = 1000
     L: int = int(1e8)
@@ -89,18 +89,21 @@ class ExtinctHalfTest(BaseArgs):
     GenStartShrink: int = 2000
     NumGenerationsReduceK: int = 1
     GenStopShrink: int = 2000 + NumGenerationsReduceK
+    GenStartRestore: int = 0
     GenSwitchEnv: int = 1000000
-    StopGen: int = 1000000
-    SamplingGen: int = 1000
-    NumSamples: int = 10
+    StopGen: int = 82000
+    #SamplingGen: int = 1000
+    #NumSamples: int = 10
     MapSize: int = 6
     StepSize: int = 0
 
     def _get_RememberGen(self) -> List[int]:
         return (
             [self.GenStartShrink, self.GenStopShrink] +
-            self._seq(self.GenStartShrink + 5,
-                      self.GenStartShrink + self.SamplingGen, self.NumSamples) + [self.SamplingGen-1000, self.SamplingGen]
+            self._seq(self.GenStartShrink + 25, self.GenStartShrink + 1000 - 1, 25)
+            #[self.GenStartShrink, self.GenStopShrink] +
+            #self._seq(self.GenStartShrink + 5,
+            #          self.GenStartShrink + self.SamplingGen, self.NumSamples) + [self.SamplingGen-1000, self.SamplingGen]
         )
 
 @dataclass
