@@ -129,7 +129,7 @@ initialize() {
 	defineGlobal("outfn", BaseFn + ".fwd.trees");
 	defineGlobal("logfn", BaseFn + ".fwd.log.tsv");
 	defineGlobal("mapVals", matrix(rbinom(MapSize*MapSize, 1, 1.0), ncol=MapSize));
-
+	
 	/* finally getting to the normal SLiM-style init block */
 	initializeSLiMModelType("nonWF");
 	initializeSLiMOptions(dimensionality="xy");
@@ -180,6 +180,26 @@ first() {
 								mapVals[box, box1] = 1;
 							}
 						}	
+					}
+				}
+				// Reseeding section
+				// place invidivuals randomly in the extincted portion
+				// governed by defining lats & long
+				count=0;
+				for (ind in sim.subpopulations.individuals) {
+					lats = ind.spatialPosition[0];
+					long = ind.spatialPosition[1];
+					if (count < IndivToRestore){
+						// TODO: currently hard-coded to only select indivs at the edge
+						if (long < 0.3){
+							// randomly select position to place individuals in 
+							lats_random = runif(1, 0, 1);
+							long_random = runif(1, 0.5, 1);
+							do newPos = c(lats_random, long_random);
+							while (!p0.pointInBounds(newPos));
+							ind.setSpatialPosition(newPos);
+							count = count +1;
+						}
 					}
 				}
 			}
